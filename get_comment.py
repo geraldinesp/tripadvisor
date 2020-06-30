@@ -4,9 +4,16 @@
 import urllib.request
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
+from selenium import webdriver
 import pandas as pd
 import numpy as np
 import re
+import pickle
+
+webdriver_path='./drivers'
+chrome_path=webdriver_path+'/chromedriver/chromedriver'
+gecko_path=webdriver_path+'/geckrdriver/geckodriver'
+cache_dir='.cache'
 
 debug=False
 
@@ -14,7 +21,7 @@ debug=False
 def cache_exists(filename):
     try:
         # write current page in cache
-        with open('cache/'+filename, 'r') as cache_file:
+        with open(cache_dir+filename, 'r') as cache_file:
             if debug:
                 print('cache for this page exist')
             return cache_file.read()
@@ -62,7 +69,7 @@ def get_page(url):
         # download the page content
         page_content = urllib.request.urlopen(url).read()
         # create empty cache file
-        cache_file=open('cache/'+filename, 'wb')
+        cache_file=open(cache_dir+filename, 'wb')
         # write page content in cache
         cache_file.write(page_content)
         cache_file.close()
@@ -158,6 +165,20 @@ def get_note(arg):
 def has_class_but_no_id(tag):
     return tag.has_attr('class') and not tag.has_attr('id')
 
+def crawl_with_webdriver(url, browser='chrome'):
+  if (browser == 'firefox'):
+    browser = webdriver.Firefox(executable_path=gecko_path)
+  else:
+    browser = webdriver.Chrome(executable_path=chrome_path)
+  browser.get(url)
+  return browser
+
+def click_on_plus(browser):
+  return browser.find_element_by_css_selector('.taLnk.ulBlueLinks').click()
+
+def get_plus(browser, comment_id)
+  # todo get the comment id we just click on plus…
+  return browser.find_elements_by_class_name("partial_entry")
 
 # french restaurant
 url_to_scrap = "https://www.tripadvisor.fr/Restaurants-g187147-c20-Paris_Ile_de_France.html"
@@ -194,6 +215,19 @@ for link in links:
         print((link['href']))
         # scrap child pages
         page_content = get_page(get_url_location(url_to_scrap)+link['href'])
+
+        #print("try crawl with webdriver")
+        # debug page url if need
+        #print(get_url_location(url_to_scrap)+link['href'])
+        # step 1: open the page
+        #browser = crawl_with_webdriver(get_url_location(url_to_scrap)+link['href'])
+        # step 2: list all comments and show if need to click on plus.
+        # step 3: click on plus on comment (if needed) and get the comment_id (ex: 3rd of the page 1)
+        # click_on_plus(browser)
+        # step 4: get the content of comment_id clicked. (comment_id = 3 for this page)
+        # get_plus(browser, comment_id)
+        #print("done")
+
         soup = BeautifulSoup(page_content, 'lxml')
         print("Restaurant : "+restaurant_title)
         note = soup.find_all(class_="r2Cf69qf")[0].get_text().replace(',','.').replace('\xa0','')
@@ -219,9 +253,7 @@ for link in links:
         print("Rapport qualite-prix : "+rapport)
 
         page = 0
-        # old
         while page <= 9:
-        #while page <= 6:
             # get comments
             if page == 0:
                 # get comment for the first page
